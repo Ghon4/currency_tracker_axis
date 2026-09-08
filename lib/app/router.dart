@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:currency_tracker_axis/app/di/dependency_injection.dart';
+import 'package:currency_tracker_axis/features/currency_detail/presentation/bloc/currency_detail_bloc.dart';
 import 'package:currency_tracker_axis/features/currency_detail/presentation/pages/currency_detail_page.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/currency_rate.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/presentation/bloc/exchange_rates_bloc.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/presentation/pages/exchange_rates_page.dart';
 
@@ -34,7 +36,13 @@ abstract final class AppRouter {
         name: 'currencyDetail',
         builder: (context, state) {
           final code = state.pathParameters['code'] ?? '';
-          return CurrencyDetailPage(code: code);
+          final seed =
+              state.extra is CurrencyRate ? state.extra as CurrencyRate : null;
+          return BlocProvider(
+            create: (_) => sl<CurrencyDetailBloc>()
+              ..add(LoadDetail(currencyCode: code, seedRate: seed)),
+            child: CurrencyDetailPage(currencyCode: code),
+          );
         },
       ),
     ],

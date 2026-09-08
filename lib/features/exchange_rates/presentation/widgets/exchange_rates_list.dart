@@ -25,6 +25,7 @@ class ExchangeRatesList extends StatelessWidget {
           rate: rate,
           onTap: () => context.push(
             AppRoutes.currencyDetailLocation(rate.code),
+            extra: rate,
           ),
         );
       },

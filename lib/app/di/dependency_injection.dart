@@ -7,9 +7,12 @@ import 'package:currency_tracker_axis/core/connectivity/connectivity_service.dar
 import 'package:currency_tracker_axis/core/connectivity/usecases/watch_connectivity.dart';
 import 'package:currency_tracker_axis/core/error/error_mapper.dart';
 import 'package:currency_tracker_axis/core/network/dio_client.dart';
+import 'package:currency_tracker_axis/features/currency_detail/data/datasources/local/currency_detail_local_datasource.dart';
+import 'package:currency_tracker_axis/features/currency_detail/data/datasources/remote/historical_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/currency_detail/data/repositories/historical_rates_repository_impl.dart';
 import 'package:currency_tracker_axis/features/currency_detail/domain/repositories/historical_rates_repository.dart';
 import 'package:currency_tracker_axis/features/currency_detail/domain/usecases/get_seven_day_history.dart';
+import 'package:currency_tracker_axis/features/currency_detail/presentation/bloc/currency_detail_bloc.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/local/exchange_rates_local_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/remote/exchange_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/mappers/rate_mapper.dart';
@@ -52,12 +55,25 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton<ExchangeRatesLocalDataSource>(
     () => ExchangeRatesLocalDataSourceImpl(sl()),
   );
+  sl.registerLazySingleton<HistoricalRatesRemoteDataSource>(
+    () => HistoricalRatesRemoteDataSourceImpl(
+      ratesRemote: sl(),
+      mapper: sl(),
+    ),
+  );
+  sl.registerLazySingleton<CurrencyDetailLocalDataSource>(
+    () => CurrencyDetailLocalDataSourceImpl(
+      ratesLocal: sl(),
+      mapCachedRates: CachedRatesPresenter.map,
+    ),
+  );
   sl.registerLazySingleton<ExchangeRatesRepository>(
     () => ExchangeRatesRepositoryImpl(
       remote: sl(),
       local: sl(),
       errorMapper: sl(),
       rateMapper: sl(),
+      historicalRemote: sl(),
     ),
   );
   sl.registerLazySingleton<HistoricalRatesRepository>(
@@ -78,6 +94,14 @@ Future<void> configureDependencies() async {
       getCachedRates: sl(),
       saveRatesToCache: sl(),
       watchConnectivity: sl(),
+      mapCachedRates: CachedRatesPresenter.map,
+    ),
+  );
+  sl.registerFactory(
+    () => CurrencyDetailBloc(
+      getSevenDayHistory: sl(),
+      getCachedRates: sl(),
+      getLatestRatesWithChange: sl(),
       mapCachedRates: CachedRatesPresenter.map,
     ),
   );

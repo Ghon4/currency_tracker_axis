@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:currency_tracker_axis/core/error/error_mapper.dart';
 import 'package:currency_tracker_axis/core/error/exceptions.dart';
 import 'package:currency_tracker_axis/core/error/failures.dart';
+import 'package:currency_tracker_axis/features/currency_detail/data/datasources/remote/historical_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/local/exchange_rates_local_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/remote/exchange_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/mappers/rate_mapper.dart';
@@ -34,6 +35,10 @@ void main() {
       local: local,
       errorMapper: const ErrorMapper(),
       rateMapper: const RateMapper(),
+      historicalRemote: HistoricalRatesRemoteDataSourceImpl(
+        ratesRemote: remote,
+        mapper: const RateMapper(),
+      ),
     );
 
     when(() => local.saveHistorical(any(), any())).thenAnswer((_) async {});

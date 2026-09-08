@@ -3,6 +3,7 @@
 import 'package:currency_tracker_axis/core/error/error_mapper.dart';
 import 'package:currency_tracker_axis/core/error/failures.dart';
 import 'package:currency_tracker_axis/core/utils/date_utils.dart';
+import 'package:currency_tracker_axis/features/currency_detail/data/datasources/remote/historical_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/local/exchange_rates_local_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/remote/exchange_rates_remote_datasource.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/data/mappers/rate_mapper.dart';
@@ -18,12 +19,14 @@ class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
     required this.local,
     required this.errorMapper,
     required this.rateMapper,
+    required this.historicalRemote,
   });
 
   final ExchangeRatesRemoteDataSource remote;
   final ExchangeRatesLocalDataSource local;
   final ErrorMapper errorMapper;
   final RateMapper rateMapper;
+  final HistoricalRatesRemoteDataSource historicalRemote;
 
   @override
   Future<Either<Failure, List<CurrencyRate>>> getLatestRates() async {
@@ -129,19 +132,9 @@ class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
     required int days,
   }) async {
     final code = currencyCode.toUpperCase();
-    final dates = AppDateUtils.lastNUtcDays(days);
-
-    final results = await Future.wait(
-      dates.map((d) async {
-        try {
-          final response = await remote.getHistoricalRates(d);
-          final rate = rateMapper.invertedRateFor(response, code);
-          if (rate == null) return null;
-          return HistoricalPoint(date: d, rate: rate);
-        } catch (_) {
-          return null;
-        }
-      }),
+    final results = await historicalRemote.fetchLastDays(
+      currencyCode: code,
+      days: days,
     );
 
     final points =
