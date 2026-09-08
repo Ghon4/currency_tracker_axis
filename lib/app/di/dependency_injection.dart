@@ -18,11 +18,13 @@ import 'package:currency_tracker_axis/features/exchange_rates/domain/repositorie
 import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/get_cached_rates.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/get_latest_rates_with_change.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/save_rates_to_cache.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/presentation/bloc/exchange_rates_bloc.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/presentation/mappers/cached_rates_presenter.dart';
 
 /// Global service locator.
 final GetIt sl = GetIt.instance;
 
-/// Registers core services, data layer, and domain use cases.
+/// Registers core services, data layer, domain use cases, and presentation BLoCs.
 ///
 /// Call after [WidgetsFlutterBinding.ensureInitialized]. Hive and
 /// connectivity are initialized here before the UI starts.
@@ -68,6 +70,17 @@ Future<void> configureDependencies() async {
   sl.registerLazySingleton(() => SaveRatesToCache(sl()));
   sl.registerLazySingleton(() => GetSevenDayHistory(sl()));
   sl.registerLazySingleton(() => WatchConnectivity(sl()));
+
+  // Presentation
+  sl.registerFactory(
+    () => ExchangeRatesBloc(
+      getLatestRatesWithChange: sl(),
+      getCachedRates: sl(),
+      saveRatesToCache: sl(),
+      watchConnectivity: sl(),
+      mapCachedRates: CachedRatesPresenter.map,
+    ),
+  );
 
   // Navigation
   sl.registerSingleton<GoRouter>(AppRouter.router);

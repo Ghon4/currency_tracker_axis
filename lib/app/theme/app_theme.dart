@@ -1,43 +1,47 @@
 import 'package:flutter/material.dart';
 
-/// Semantic colors for rate change direction (finance teal theme).
+/// Semantic colors for EGP rate-change direction.
 @immutable
-class RateChangeColors extends ThemeExtension<RateChangeColors> {
-  const RateChangeColors({
-    required this.positive,
-    required this.negative,
+class RateColors extends ThemeExtension<RateColors> {
+  const RateColors({
+    required this.egpStrengthening,
+    required this.egpWeakening,
   });
 
-  /// Green used when EGP strengthens / favorable change display.
-  final Color positive;
+  /// Green — EGP strengthens when foreign rate decreases (`change < 0`).
+  final Color egpStrengthening;
 
-  /// Red used when EGP weakens / unfavorable change display.
-  final Color negative;
+  /// Red — EGP weakens when foreign rate increases (`change > 0`).
+  final Color egpWeakening;
 
-  static const light = RateChangeColors(
-    positive: Color(0xFF15803D),
-    negative: Color(0xFFB91C1C),
+  static const light = RateColors(
+    egpStrengthening: Color(0xFF15803D),
+    egpWeakening: Color(0xFFB91C1C),
   );
 
-  static const dark = RateChangeColors(
-    positive: Color(0xFF22C55E),
-    negative: Color(0xFFEF4444),
+  static const dark = RateColors(
+    egpStrengthening: Color(0xFF4ADE80),
+    egpWeakening: Color(0xFFF87171),
   );
 
   @override
-  RateChangeColors copyWith({Color? positive, Color? negative}) {
-    return RateChangeColors(
-      positive: positive ?? this.positive,
-      negative: negative ?? this.negative,
+  RateColors copyWith({
+    Color? egpStrengthening,
+    Color? egpWeakening,
+  }) {
+    return RateColors(
+      egpStrengthening: egpStrengthening ?? this.egpStrengthening,
+      egpWeakening: egpWeakening ?? this.egpWeakening,
     );
   }
 
   @override
-  RateChangeColors lerp(ThemeExtension<RateChangeColors>? other, double t) {
-    if (other is! RateChangeColors) return this;
-    return RateChangeColors(
-      positive: Color.lerp(positive, other.positive, t)!,
-      negative: Color.lerp(negative, other.negative, t)!,
+  RateColors lerp(ThemeExtension<RateColors>? other, double t) {
+    if (other is! RateColors) return this;
+    return RateColors(
+      egpStrengthening:
+          Color.lerp(egpStrengthening, other.egpStrengthening, t)!,
+      egpWeakening: Color.lerp(egpWeakening, other.egpWeakening, t)!,
     );
   }
 }
@@ -46,11 +50,14 @@ class RateChangeColors extends ThemeExtension<RateChangeColors> {
 abstract final class AppTheme {
   static const Color _seed = Color(0xFF0F766E);
 
-  static ThemeData get light => _build(Brightness.light, RateChangeColors.light);
+  static ThemeData get light => _build(Brightness.light, RateColors.light);
 
-  static ThemeData get dark => _build(Brightness.dark, RateChangeColors.dark);
+  static ThemeData get dark => _build(Brightness.dark, RateColors.dark);
 
-  static ThemeData _build(Brightness brightness, RateChangeColors changeColors) {
+  static RateColors rateColors(BuildContext context) =>
+      Theme.of(context).extension<RateColors>()!;
+
+  static ThemeData _build(Brightness brightness, RateColors rateColors) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: _seed,
       brightness: brightness,
@@ -59,7 +66,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      extensions: [changeColors],
+      extensions: [rateColors],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,
@@ -68,8 +75,8 @@ abstract final class AppTheme {
         scrolledUnderElevation: 1,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
-        color: colorScheme.surfaceContainerLow,
+        elevation: 1,
+        color: colorScheme.surfaceContainerLowest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       textTheme: _textTheme(colorScheme),
@@ -83,10 +90,13 @@ abstract final class AppTheme {
       displayColor: colorScheme.onSurface,
     );
 
-    // Rate rows: titleMedium for currency name, bodyLarge for values.
     return platform.copyWith(
       titleMedium: platform.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
+      ),
+      titleLarge: platform.titleLarge?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontFeatures: const [FontFeature.tabularFigures()],
       ),
       bodyLarge: platform.bodyLarge?.copyWith(
         fontFeatures: const [FontFeature.tabularFigures()],

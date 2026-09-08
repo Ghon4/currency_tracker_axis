@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:currency_tracker_axis/app/di/dependency_injection.dart';
 import 'package:currency_tracker_axis/features/currency_detail/presentation/pages/currency_detail_page.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/presentation/bloc/exchange_rates_bloc.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/presentation/pages/exchange_rates_page.dart';
 
 /// Application route paths.
@@ -21,7 +24,10 @@ abstract final class AppRouter {
       GoRoute(
         path: AppRoutes.home,
         name: 'exchangeRates',
-        builder: (context, state) => const ExchangeRatesPage(),
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<ExchangeRatesBloc>()..add(const LoadRates()),
+          child: const ExchangeRatesPage(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.currencyDetail,
