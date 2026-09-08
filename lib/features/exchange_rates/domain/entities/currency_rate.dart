@@ -22,10 +22,14 @@ class CurrencyRate extends Equatable {
   final double rate;
 
   /// Absolute day-over-day change in inverted rate.
-  final double change;
+  ///
+  /// Null when yesterday's rate is unavailable.
+  final double? change;
 
   /// Percentage day-over-day change.
-  final double changePercentage;
+  ///
+  /// Null when yesterday's rate is unavailable.
+  final double? changePercentage;
 
   /// When the underlying API snapshot was taken / last known.
   final DateTime lastUpdated;
@@ -33,11 +37,14 @@ class CurrencyRate extends Equatable {
   /// Whether this value was served from local cache.
   final bool isFromCache;
 
+  /// Whether day-over-day change fields are present.
+  bool get hasChange => change != null && changePercentage != null;
+
   /// Fewer EGP per foreign unit ⇒ EGP strengthened.
-  bool get isEgpStrengthening => change < 0;
+  bool get isEgpStrengthening => (change ?? 0) < 0;
 
   /// More EGP per foreign unit ⇒ EGP weakened.
-  bool get isEgpWeakening => change > 0;
+  bool get isEgpWeakening => (change ?? 0) > 0;
 
   @override
   List<Object?> get props => [

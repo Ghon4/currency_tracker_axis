@@ -6,8 +6,8 @@ import 'package:currency_tracker_axis/core/error/exceptions.dart';
 
 /// Hive-backed local cache for rates and historical series.
 class HiveService {
-  Box<CachedRates>? _ratesBox;
-  Box<CachedHistorical>? _historicalBox;
+  Box<HiveCachedRates>? _ratesBox;
+  Box<HiveCachedHistorical>? _historicalBox;
   Box<dynamic>? _metaBox;
   bool _initialized = false;
 
@@ -19,9 +19,11 @@ class HiveService {
     await Hive.initFlutter();
     registerCacheAdapters();
 
-    _ratesBox = await Hive.openBox<CachedRates>(AppConstants.ratesBoxName);
-    _historicalBox =
-        await Hive.openBox<CachedHistorical>(AppConstants.historicalBoxName);
+    _ratesBox =
+        await Hive.openBox<HiveCachedRates>(AppConstants.ratesBoxName);
+    _historicalBox = await Hive.openBox<HiveCachedHistorical>(
+      AppConstants.historicalBoxName,
+    );
     _metaBox = await Hive.openBox<dynamic>(AppConstants.metaBoxName);
 
     await _migrateSchemaIfNeeded();
@@ -44,7 +46,7 @@ class HiveService {
   }
 
   /// Persists the latest rates snapshot.
-  Future<void> saveRates(CachedRates rates) async {
+  Future<void> saveRates(HiveCachedRates rates) async {
     try {
       await _requireRatesBox().put(AppConstants.cachedRatesKey, rates);
     } catch (error) {
@@ -53,7 +55,7 @@ class HiveService {
   }
 
   /// Reads the cached rates snapshot, or `null` if missing.
-  CachedRates? readRates() {
+  HiveCachedRates? readRates() {
     try {
       return _requireRatesBox().get(AppConstants.cachedRatesKey);
     } catch (error) {
@@ -62,7 +64,7 @@ class HiveService {
   }
 
   /// Persists historical points for [historical.currencyCode].
-  Future<void> saveHistorical(CachedHistorical historical) async {
+  Future<void> saveHistorical(HiveCachedHistorical historical) async {
     try {
       await _requireHistoricalBox().put(
         historical.currencyCode.toUpperCase(),
@@ -74,7 +76,7 @@ class HiveService {
   }
 
   /// Reads cached historical data for [currencyCode], or `null`.
-  CachedHistorical? readHistorical(String currencyCode) {
+  HiveCachedHistorical? readHistorical(String currencyCode) {
     try {
       return _requireHistoricalBox().get(currencyCode.toUpperCase());
     } catch (error) {
@@ -96,7 +98,7 @@ class HiveService {
     }
   }
 
-  Box<CachedRates> _requireRatesBox() {
+  Box<HiveCachedRates> _requireRatesBox() {
     final box = _ratesBox;
     if (box == null || !box.isOpen) {
       throw const CacheException(message: 'Rates box is not open.');
@@ -104,7 +106,7 @@ class HiveService {
     return box;
   }
 
-  Box<CachedHistorical> _requireHistoricalBox() {
+  Box<HiveCachedHistorical> _requireHistoricalBox() {
     final box = _historicalBox;
     if (box == null || !box.isOpen) {
       throw const CacheException(message: 'Historical box is not open.');

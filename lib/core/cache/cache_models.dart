@@ -1,10 +1,10 @@
 import 'package:hive/hive.dart';
 
-/// Cached latest + yesterday inverted rates snapshot.
+/// Hive-persisted latest + yesterday inverted rates snapshot.
 ///
 /// Rates are stored already inverted (EGP per 1 foreign unit).
-class CachedRates extends HiveObject {
-  CachedRates({
+class HiveCachedRates extends HiveObject {
+  HiveCachedRates({
     required this.rates,
     required this.yesterdayRates,
     required this.timestamp,
@@ -24,22 +24,22 @@ class CachedRates extends HiveObject {
   String? apiDate;
 }
 
-/// Cached historical series for a single currency.
-class CachedHistorical extends HiveObject {
-  CachedHistorical({
+/// Hive-persisted historical series for a single currency.
+class HiveCachedHistorical extends HiveObject {
+  HiveCachedHistorical({
     required this.currencyCode,
     required this.points,
     required this.timestamp,
   });
 
   String currencyCode;
-  List<CachedHistoricalPoint> points;
+  List<HiveCachedHistoricalPoint> points;
   DateTime timestamp;
 }
 
-/// A single historical rate point.
-class CachedHistoricalPoint {
-  CachedHistoricalPoint({
+/// A single historical rate point stored in Hive.
+class HiveCachedHistoricalPoint {
+  HiveCachedHistoricalPoint({
     required this.date,
     required this.rate,
   });
@@ -50,27 +50,27 @@ class CachedHistoricalPoint {
   double rate;
 }
 
-/// Hive typeId for [CachedRates].
+/// Hive typeId for [HiveCachedRates].
 const int cachedRatesTypeId = 1;
 
-/// Hive typeId for [CachedHistorical].
+/// Hive typeId for [HiveCachedHistorical].
 const int cachedHistoricalTypeId = 2;
 
-/// Hive typeId for [CachedHistoricalPoint].
+/// Hive typeId for [HiveCachedHistoricalPoint].
 const int cachedHistoricalPointTypeId = 3;
 
 /// Hand-written adapters (hive_generator conflicts with freezed ^3 source_gen).
-class CachedRatesAdapter extends TypeAdapter<CachedRates> {
+class CachedRatesAdapter extends TypeAdapter<HiveCachedRates> {
   @override
   final int typeId = cachedRatesTypeId;
 
   @override
-  CachedRates read(BinaryReader reader) {
+  HiveCachedRates read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return CachedRates(
+    return HiveCachedRates(
       rates: (fields[0] as Map).map(
         (key, value) => MapEntry(key as String, (value as num).toDouble()),
       ),
@@ -83,7 +83,7 @@ class CachedRatesAdapter extends TypeAdapter<CachedRates> {
   }
 
   @override
-  void write(BinaryWriter writer, CachedRates obj) {
+  void write(BinaryWriter writer, HiveCachedRates obj) {
     writer
       ..writeByte(4)
       ..writeByte(0)
@@ -97,25 +97,25 @@ class CachedRatesAdapter extends TypeAdapter<CachedRates> {
   }
 }
 
-class CachedHistoricalAdapter extends TypeAdapter<CachedHistorical> {
+class CachedHistoricalAdapter extends TypeAdapter<HiveCachedHistorical> {
   @override
   final int typeId = cachedHistoricalTypeId;
 
   @override
-  CachedHistorical read(BinaryReader reader) {
+  HiveCachedHistorical read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return CachedHistorical(
+    return HiveCachedHistorical(
       currencyCode: fields[0] as String,
-      points: (fields[1] as List).cast<CachedHistoricalPoint>(),
+      points: (fields[1] as List).cast<HiveCachedHistoricalPoint>(),
       timestamp: fields[2] as DateTime,
     );
   }
 
   @override
-  void write(BinaryWriter writer, CachedHistorical obj) {
+  void write(BinaryWriter writer, HiveCachedHistorical obj) {
     writer
       ..writeByte(3)
       ..writeByte(0)
@@ -127,24 +127,25 @@ class CachedHistoricalAdapter extends TypeAdapter<CachedHistorical> {
   }
 }
 
-class CachedHistoricalPointAdapter extends TypeAdapter<CachedHistoricalPoint> {
+class CachedHistoricalPointAdapter
+    extends TypeAdapter<HiveCachedHistoricalPoint> {
   @override
   final int typeId = cachedHistoricalPointTypeId;
 
   @override
-  CachedHistoricalPoint read(BinaryReader reader) {
+  HiveCachedHistoricalPoint read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return CachedHistoricalPoint(
+    return HiveCachedHistoricalPoint(
       date: fields[0] as DateTime,
       rate: (fields[1] as num).toDouble(),
     );
   }
 
   @override
-  void write(BinaryWriter writer, CachedHistoricalPoint obj) {
+  void write(BinaryWriter writer, HiveCachedHistoricalPoint obj) {
     writer
       ..writeByte(2)
       ..writeByte(0)

@@ -37,6 +37,7 @@ dependencies:
   # DI / navigation
   get_it: ^8.0.3
   go_router: ^14.8.1
+  dartz: 0.10.1
 
 dev_dependencies:
   flutter_test:

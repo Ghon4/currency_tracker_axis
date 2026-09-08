@@ -1,5 +1,5 @@
 import 'package:currency_tracker_axis/core/constants/app_constants.dart';
-import 'package:currency_tracker_axis/core/error/failures.dart';
+import 'package:currency_tracker_axis/core/error/error_mapper.dart';
 
 /// Retry helper for transient network/server failures.
 ///
@@ -7,6 +7,8 @@ import 'package:currency_tracker_axis/core/error/failures.dart';
 /// (`300ms * attempt`). Parse, empty, and cache failures are never retried.
 class RetryPolicy {
   RetryPolicy._();
+
+  static const ErrorMapper _errorMapper = ErrorMapper();
 
   /// Runs [action], retrying when the thrown error maps to a retryable
   /// [Failure].
@@ -16,7 +18,7 @@ class RetryPolicy {
       try {
         return await action();
       } catch (error) {
-        final failure = mapExceptionToFailure(error);
+        final failure = _errorMapper.map(error);
         final canRetry =
             failure.isRetryable && attempt < AppConstants.maxRetries;
         if (!canRetry) rethrow;
