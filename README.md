@@ -86,17 +86,6 @@ flutter test
 
 Coverage includes mappers, repository fallback, retry/TTL, both BLoCs, offline banner, pages, and flow-style widget tests under `test/integration/`.
 
-## Screenshots
-
-Add device captures under:
-
-```text
-docs/screenshots/
-  list.png
-  detail.png
-  offline.png
-```
-
 *(Placeholders — capture after `flutter run`.)*
 
 ## AI assistance
