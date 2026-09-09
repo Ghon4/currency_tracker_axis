@@ -26,14 +26,40 @@ final class ExchangeRatesSuccess extends ExchangeRatesState {
     required this.rates,
     required this.isFromCache,
     required this.lastUpdated,
+    this.isCacheStale = false,
+    this.userMessage,
   });
 
   final List<CurrencyRate> rates;
   final bool isFromCache;
   final DateTime lastUpdated;
 
+  /// True when serving cache older than the 24-hour TTL.
+  final bool isCacheStale;
+
+  /// One-shot snackbar message (e.g. soft offline refresh failure).
+  final String? userMessage;
+
+  ExchangeRatesSuccess copyWith({
+    List<CurrencyRate>? rates,
+    bool? isFromCache,
+    DateTime? lastUpdated,
+    bool? isCacheStale,
+    String? userMessage,
+    bool clearUserMessage = false,
+  }) {
+    return ExchangeRatesSuccess(
+      rates: rates ?? this.rates,
+      isFromCache: isFromCache ?? this.isFromCache,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+      isCacheStale: isCacheStale ?? this.isCacheStale,
+      userMessage: clearUserMessage ? null : (userMessage ?? this.userMessage),
+    );
+  }
+
   @override
-  List<Object?> get props => [rates, isFromCache, lastUpdated];
+  List<Object?> get props =>
+      [rates, isFromCache, lastUpdated, isCacheStale, userMessage];
 }
 
 final class ExchangeRatesError extends ExchangeRatesState {
@@ -50,7 +76,7 @@ final class ExchangeRatesError extends ExchangeRatesState {
 }
 
 final class ExchangeRatesEmpty extends ExchangeRatesState {
-  const ExchangeRatesEmpty({this.message = 'No exchange rates available.'});
+  const ExchangeRatesEmpty({this.message = ErrorMessages.empty});
 
   final String message;
 

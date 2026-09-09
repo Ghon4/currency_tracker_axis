@@ -1,10 +1,13 @@
+import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:currency_tracker_axis/core/error/error_messages.dart';
 import 'package:currency_tracker_axis/features/currency_detail/domain/usecases/get_seven_day_history.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/cached_rates.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/currency_rate.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/historical_point.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/get_cached_historical.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/get_cached_rates.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/usecases/get_latest_rates_with_change.dart';
 
@@ -20,10 +23,12 @@ class CurrencyDetailBloc
   CurrencyDetailBloc({
     required GetSevenDayHistory getSevenDayHistory,
     required GetCachedRates getCachedRates,
+    required GetCachedHistorical getCachedHistorical,
     required GetLatestRatesWithChange getLatestRatesWithChange,
     required List<CurrencyRate> Function(CachedRates) mapCachedRates,
   })  : _getSevenDayHistory = getSevenDayHistory,
         _getCachedRates = getCachedRates,
+        _getCachedHistorical = getCachedHistorical,
         _getLatestRatesWithChange = getLatestRatesWithChange,
         _mapCachedRates = mapCachedRates,
         super(const CurrencyDetailInitial()) {
@@ -33,10 +38,12 @@ class CurrencyDetailBloc
 
   final GetSevenDayHistory _getSevenDayHistory;
   final GetCachedRates _getCachedRates;
+  final GetCachedHistorical _getCachedHistorical;
   final GetLatestRatesWithChange _getLatestRatesWithChange;
   final List<CurrencyRate> Function(CachedRates) _mapCachedRates;
 
   String? _code;
+  CancelToken? _cancelToken;
 
   Future<void> _onLoadDetail(
     LoadDetail event,
@@ -50,7 +57,7 @@ class CurrencyDetailBloc
       emit(
         CurrencyDetailFullError(
           currencyCode: _code!,
-          message: 'Could not load rate for $_code.',
+          message: ErrorMessages.rateUnavailable,
         ),
       );
       return;
@@ -102,7 +109,7 @@ class CurrencyDetailBloc
       emit(
         CurrencyDetailFullError(
           currencyCode: code,
-          message: 'Could not refresh rate for $code.',
+          message: ErrorMessages.rateUnavailable,
         ),
       );
       return;
@@ -172,20 +179,37 @@ class CurrencyDetailBloc
     Emitter<CurrencyDetailState> emit,
     CurrencyDetailHeaderData header,
   ) async {
+    // Cache-first: show cached chart immediately when available.
+    final cachedEither = await _getCachedHistorical(header.rate.code);
+    final cachedPoints = cachedEither.fold<List<HistoricalPoint>?>(
+      (_) => null,
+      (points) => points,
+    );
+    if (cachedPoints != null && cachedPoints.isNotEmpty) {
+      emit(CurrencyDetailSuccess(header: header, points: cachedPoints));
+    }
+
     final result = await _getSevenDayHistory(header.rate.code);
     result.fold(
-      (failure) => emit(
-        CurrencyDetailChartError(
-          header: header,
-          message: failure.userMessage,
-        ),
-      ),
+      (failure) {
+        if (cachedPoints != null && cachedPoints.isNotEmpty) {
+          // Keep cached chart; no ChartError when we already have points.
+          return;
+        }
+        emit(
+          CurrencyDetailChartError(
+            header: header,
+            message: failure.userMessage,
+          ),
+        );
+      },
       (points) {
         if (points.isEmpty) {
+          if (cachedPoints != null && cachedPoints.isNotEmpty) return;
           emit(
             CurrencyDetailChartError(
               header: header,
-              message: 'No historical data available.',
+              message: ErrorMessages.empty,
             ),
           );
           return;
@@ -193,5 +217,11 @@ class CurrencyDetailBloc
         emit(CurrencyDetailSuccess(header: header, points: points));
       },
     );
+  }
+
+  @override
+  Future<void> close() {
+    _cancelToken?.cancel('Bloc closed');
+    return super.close();
   }
 }

@@ -1,31 +1,71 @@
-import 'package:currency_tracker_axis/core/constants/app_constants.dart';
-import 'package:currency_tracker_axis/core/error/error_mapper.dart';
+import 'package:dio/dio.dart';
 
-/// Retry helper for transient network/server failures.
-///
-/// Retries at most [AppConstants.maxRetries] times with exponential backoff
-/// (`300ms * attempt`). Parse, empty, and cache failures are never retried.
+import 'package:currency_tracker_axis/core/error/exceptions.dart';
+
+/// Categories controlling automatic retry behavior.
+enum RetryCategory {
+  /// Transient connectivity issues — up to 3 attempts with backoff.
+  network,
+
+  /// Upstream 5xx / retryable server faults — up to 2 attempts.
+  server,
+
+  /// Cache / parse / non-retryable — fail fast (1 attempt).
+  none,
+}
+
+/// Executes remote work with category-specific retry + exponential backoff.
 class RetryPolicy {
-  RetryPolicy._();
+  const RetryPolicy();
 
-  static const ErrorMapper _errorMapper = ErrorMapper();
+  /// Runs [action], retrying according to [category].
+  Future<T> execute<T>(
+    Future<T> Function() action, {
+    RetryCategory category = RetryCategory.network,
+  }) async {
+    final maxAttempts = switch (category) {
+      RetryCategory.network => 3,
+      RetryCategory.server => 2,
+      RetryCategory.none => 1,
+    };
 
-  /// Runs [action], retrying when the thrown error maps to a retryable
-  /// [Failure].
-  static Future<T> execute<T>(Future<T> Function() action) async {
     var attempt = 0;
     while (true) {
+      attempt++;
       try {
         return await action();
-      } catch (error) {
-        final failure = _errorMapper.map(error);
-        final canRetry =
-            failure.isRetryable && attempt < AppConstants.maxRetries;
-        if (!canRetry) rethrow;
-
-        attempt++;
-        await Future<void>.delayed(AppConstants.retryBaseDelay * attempt);
+      } catch (e) {
+        final retryable = _isRetryable(e, category);
+        if (!retryable || attempt >= maxAttempts) rethrow;
+        final delay = Duration(milliseconds: 300 * (1 << (attempt - 1)));
+        await Future<void>.delayed(delay);
       }
     }
+  }
+
+  bool _isRetryable(Object e, RetryCategory category) {
+    if (category == RetryCategory.none) return false;
+    if (e is CacheException ||
+        e is ParseException ||
+        e is EmptyDataException ||
+        e is RateUnavailableException ||
+        e is InvalidRateException) {
+      return false;
+    }
+    if (e is NetworkException) return category == RetryCategory.network;
+    if (e is ServerException) {
+      final code = e.statusCode ?? 0;
+      if (code >= 400 && code < 500 && code != 408) return false;
+      return category == RetryCategory.server ||
+          category == RetryCategory.network;
+    }
+    if (e is DioException) {
+      return e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.connectionError ||
+          (e.response?.statusCode ?? 0) >= 500;
+    }
+    return false;
   }
 }

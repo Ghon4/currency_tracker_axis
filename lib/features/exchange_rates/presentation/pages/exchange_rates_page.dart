@@ -25,8 +25,20 @@ class ExchangeRatesPage extends StatelessWidget {
         title: const Text('Currency Exchange Rates'),
       ),
       body: BlocConsumer<ExchangeRatesBloc, ExchangeRatesState>(
+        listenWhen: (previous, current) {
+          if (current is! ExchangeRatesSuccess) return false;
+          return current.userMessage != null &&
+              (previous is! ExchangeRatesSuccess ||
+                  previous.userMessage != current.userMessage);
+        },
         listener: (context, state) {
-          // Reserved for snackbars on silent refresh failure.
+          if (state is ExchangeRatesSuccess && state.userMessage != null) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text(state.userMessage!)),
+              );
+          }
         },
         builder: (context, state) {
           return switch (state) {
@@ -42,10 +54,15 @@ class ExchangeRatesPage extends StatelessWidget {
               :final rates,
               :final isFromCache,
               :final lastUpdated,
+              :final isCacheStale,
             ) =>
               Column(
                 children: [
-                  if (isFromCache) OfflineBanner(lastUpdated: lastUpdated),
+                  if (isFromCache)
+                    OfflineBanner(
+                      lastUpdated: lastUpdated,
+                      isStale: isCacheStale,
+                    ),
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: () => _onRefresh(context),

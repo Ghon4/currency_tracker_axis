@@ -56,15 +56,21 @@ class AppConstants {
   static const String cacheSchemaVersionKey = 'schema_version';
   static const int cacheSchemaVersion = 1;
 
+  /// Freshness window for rates cache (API updates roughly once per day).
+  static const Duration cacheTtl = Duration(hours: 24);
+
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const Duration sendTimeout = Duration(seconds: 15);
   static const Duration connectivityDebounce = Duration(milliseconds: 800);
 
+  /// Extra wait inside [ExchangeRatesBloc] after reconnect before refresh.
+  static const Duration reconnectRefreshDebounce = Duration(seconds: 2);
+
   /// Number of calendar days for historical chart windows.
   static const int historicalDays = 7;
 
-  /// Maximum retries for transient network/server failures.
+  /// Maximum retries for transient network/server failures (legacy helper).
   static const int maxRetries = 2;
 
   /// Base delay for exponential backoff (`300ms * attempt`).

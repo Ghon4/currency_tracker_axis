@@ -1,9 +1,5 @@
-import 'package:hive/hive.dart';
-
-import 'package:currency_tracker_axis/core/cache/cache_models.dart';
-import 'package:currency_tracker_axis/core/cache/hive_service.dart';
 import 'package:currency_tracker_axis/core/error/exceptions.dart';
-import 'package:currency_tracker_axis/core/utils/date_utils.dart';
+import 'package:currency_tracker_axis/features/exchange_rates/data/datasources/local/cache_operations.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/cached_rates.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/historical_point.dart';
 
@@ -29,16 +25,22 @@ abstract class ExchangeRatesLocalDataSource {
   /// Reads cached historical points for [currencyCode], or `null`.
   Future<List<HistoricalPoint>?> getCachedHistorical(String currencyCode);
 
-  /// Valid when cached timestamp is the same UTC calendar day as now.
+  /// Valid when cached timestamp is within the 24-hour TTL.
   Future<bool> isCacheValid();
+
+  /// Timestamp of the cached rates snapshot, if any.
+  Future<DateTime?> getCacheTimestamp();
+
+  /// Clears memory + Hive cache.
+  Future<void> clearCache();
 }
 
-/// Hive-backed implementation of [ExchangeRatesLocalDataSource].
+/// Delegates all cache IO to [CacheOperations] (single write path).
 class ExchangeRatesLocalDataSourceImpl
     implements ExchangeRatesLocalDataSource {
-  ExchangeRatesLocalDataSourceImpl(this._hive);
+  ExchangeRatesLocalDataSourceImpl(this._cache);
 
-  final HiveService _hive;
+  final CacheOperations _cache;
 
   @override
   Future<void> saveRates(
@@ -48,18 +50,14 @@ class ExchangeRatesLocalDataSourceImpl
     String? apiDate,
   }) async {
     try {
-      await _hive.saveRates(
-        HiveCachedRates(
-          rates: Map<String, double>.from(rates),
-          yesterdayRates: Map<String, double>.from(yesterdayRates),
-          timestamp: timestamp.toUtc(),
-          apiDate: apiDate,
-        ),
+      await _cache.saveRates(
+        rates: rates,
+        yesterdayRates: yesterdayRates,
+        timestamp: timestamp,
+        apiDate: apiDate,
       );
     } on CacheException {
       rethrow;
-    } on HiveError catch (e) {
-      throw CacheException(message: e.message);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
@@ -68,18 +66,9 @@ class ExchangeRatesLocalDataSourceImpl
   @override
   Future<CachedRates?> getCachedRates() async {
     try {
-      final hive = _hive.readRates();
-      if (hive == null) return null;
-      return CachedRates(
-        rates: Map<String, double>.from(hive.rates),
-        yesterdayRates: Map<String, double>.from(hive.yesterdayRates),
-        timestamp: hive.timestamp,
-        apiDate: hive.apiDate,
-      );
+      return await _cache.getCachedRates();
     } on CacheException {
       rethrow;
-    } on HiveError catch (e) {
-      throw CacheException(message: e.message);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
@@ -91,25 +80,9 @@ class ExchangeRatesLocalDataSourceImpl
     List<HistoricalPoint> points,
   ) async {
     try {
-      final code = currencyCode.toUpperCase();
-      await _hive.saveHistorical(
-        HiveCachedHistorical(
-          currencyCode: code,
-          points: points
-              .map(
-                (p) => HiveCachedHistoricalPoint(
-                  date: p.date.toUtc(),
-                  rate: p.rate,
-                ),
-              )
-              .toList(growable: false),
-          timestamp: DateTime.now().toUtc(),
-        ),
-      );
+      await _cache.saveHistorical(currencyCode, points);
     } on CacheException {
       rethrow;
-    } on HiveError catch (e) {
-      throw CacheException(message: e.message);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
@@ -120,20 +93,9 @@ class ExchangeRatesLocalDataSourceImpl
     String currencyCode,
   ) async {
     try {
-      final hive = _hive.readHistorical(currencyCode.toUpperCase());
-      if (hive == null) return null;
-      return hive.points
-          .map(
-            (p) => HistoricalPoint(
-              date: p.date.toUtc(),
-              rate: p.rate,
-            ),
-          )
-          .toList(growable: false);
+      return await _cache.getCachedHistorical(currencyCode);
     } on CacheException {
       rethrow;
-    } on HiveError catch (e) {
-      throw CacheException(message: e.message);
     } catch (e) {
       throw CacheException(message: e.toString());
     }
@@ -141,14 +103,34 @@ class ExchangeRatesLocalDataSourceImpl
 
   @override
   Future<bool> isCacheValid() async {
-    final cached = await getCachedRates();
-    if (cached == null) return false;
-    final today = AppDateUtils.utcToday();
-    final cachedDay = DateTime.utc(
-      cached.timestamp.toUtc().year,
-      cached.timestamp.toUtc().month,
-      cached.timestamp.toUtc().day,
-    );
-    return cachedDay == today;
+    try {
+      return await _cache.isCacheValid();
+    } on CacheException {
+      rethrow;
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<DateTime?> getCacheTimestamp() async {
+    try {
+      return await _cache.getCacheTimestamp();
+    } on CacheException {
+      rethrow;
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> clearCache() async {
+    try {
+      await _cache.clearCache();
+    } on CacheException {
+      rethrow;
+    } catch (e) {
+      throw CacheException(message: e.toString());
+    }
   }
 }

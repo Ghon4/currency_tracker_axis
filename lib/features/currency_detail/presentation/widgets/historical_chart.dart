@@ -26,8 +26,9 @@ class HistoricalChart extends StatelessWidget {
     final maxY = sorted.map((p) => p.rate).reduce(math.max);
     final pad = (maxY - minY) == 0 ? math.max(maxY * 0.01, 0.01) : (maxY - minY) * 0.1;
 
-    return LineChart(
-      LineChartData(
+    return RepaintBoundary(
+      child: LineChart(
+        LineChartData(
         minX: 0,
         maxX: (sorted.length - 1).toDouble(),
         minY: minY - pad,
@@ -135,6 +136,7 @@ class HistoricalChart extends StatelessWidget {
             ],
           ),
         ],
+        ),
       ),
     );
   }

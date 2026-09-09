@@ -49,3 +49,34 @@ class EmptyDataException implements Exception {
   @override
   String toString() => 'EmptyDataException(message: $message)';
 }
+
+/// Thrown when a specific currency rate is missing from an otherwise valid
+/// payload.
+class RateUnavailableException implements Exception {
+  const RateUnavailableException({this.message});
+
+  final String? message;
+
+  @override
+  String toString() => 'RateUnavailableException(message: $message)';
+}
+
+/// Thrown when a raw rate is zero, negative, or otherwise unusable.
+class InvalidRateException implements Exception {
+  const InvalidRateException({this.message});
+
+  final String? message;
+
+  @override
+  String toString() => 'InvalidRateException(message: $message)';
+}
+
+/// Thrown when a network request exceeds configured timeouts.
+class RequestTimeoutException implements Exception {
+  const RequestTimeoutException({this.message});
+
+  final String? message;
+
+  @override
+  String toString() => 'RequestTimeoutException(message: $message)';
+}

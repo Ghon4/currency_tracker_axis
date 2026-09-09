@@ -91,7 +91,16 @@ class _DetailBody extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          SizedBox(height: 240, child: chart),
+          SizedBox(
+            height: 240,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: KeyedSubtree(
+                key: ValueKey(chart.runtimeType),
+                child: chart,
+              ),
+            ),
+          ),
         ],
       ),
     );

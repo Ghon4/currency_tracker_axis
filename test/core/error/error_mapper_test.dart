@@ -55,9 +55,9 @@ void main() {
         );
       }
 
-      expect(fromType(DioExceptionType.connectionTimeout), isA<NetworkFailure>());
-      expect(fromType(DioExceptionType.sendTimeout), isA<NetworkFailure>());
-      expect(fromType(DioExceptionType.receiveTimeout), isA<NetworkFailure>());
+      expect(fromType(DioExceptionType.connectionTimeout), isA<TimeoutFailure>());
+      expect(fromType(DioExceptionType.sendTimeout), isA<TimeoutFailure>());
+      expect(fromType(DioExceptionType.receiveTimeout), isA<TimeoutFailure>());
       expect(fromType(DioExceptionType.connectionError), isA<NetworkFailure>());
       expect(fromType(DioExceptionType.badCertificate), isA<NetworkFailure>());
       expect(fromType(DioExceptionType.unknown), isA<NetworkFailure>());

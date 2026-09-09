@@ -6,6 +6,8 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:currency_tracker_axis/app/theme/app_theme.dart';
 import 'package:currency_tracker_axis/core/widgets/error_view.dart';
+import 'package:currency_tracker_axis/core/widgets/loading_widget.dart';
+import 'package:currency_tracker_axis/core/widgets/offline_banner.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/domain/entities/currency_rate.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/presentation/bloc/exchange_rates_bloc.dart';
 import 'package:currency_tracker_axis/features/exchange_rates/presentation/pages/exchange_rates_page.dart';
@@ -61,6 +63,14 @@ void main() {
 
     expect(find.byType(CurrencyListItem), findsOneWidget);
     expect(find.text('US Dollar'), findsOneWidget);
+    expect(find.byType(OfflineBanner), findsNothing);
+  });
+
+  testWidgets('Loading shows shimmer', (tester) async {
+    when(() => bloc.state).thenReturn(const ExchangeRatesLoading());
+    await tester.pumpWidget(buildPage());
+    await tester.pump();
+    expect(find.byType(RatesShimmerList), findsOneWidget);
   });
 
   testWidgets('Error shows Retry and tapping dispatches LoadRates',
@@ -94,7 +104,48 @@ void main() {
     await tester.pumpWidget(buildPage());
     await tester.pump();
 
-    expect(find.textContaining('Offline'), findsOneWidget);
-    expect(find.textContaining('cached data'), findsOneWidget);
+    expect(find.byType(OfflineBanner), findsOneWidget);
+    expect(find.textContaining('Last updated:'), findsOneWidget);
+  });
+
+  testWidgets('stale cache shows warning banner', (tester) async {
+    when(() => bloc.state).thenReturn(
+      ExchangeRatesSuccess(
+        rates: rates,
+        isFromCache: true,
+        lastUpdated: DateTime.utc(2026, 3, 18),
+        isCacheStale: true,
+      ),
+    );
+
+    await tester.pumpWidget(buildPage());
+    await tester.pump();
+
+    expect(find.textContaining('Stale data'), findsOneWidget);
+  });
+
+  testWidgets('userMessage shows SnackBar', (tester) async {
+    whenListen(
+      bloc,
+      Stream.fromIterable([
+        ExchangeRatesSuccess(
+          rates: rates,
+          isFromCache: true,
+          lastUpdated: rates.first.lastUpdated,
+          userMessage: "You're offline.",
+        ),
+      ]),
+      initialState: ExchangeRatesSuccess(
+        rates: rates,
+        isFromCache: true,
+        lastUpdated: rates.first.lastUpdated,
+      ),
+    );
+
+    await tester.pumpWidget(buildPage());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text("You're offline."), findsOneWidget);
   });
 }
