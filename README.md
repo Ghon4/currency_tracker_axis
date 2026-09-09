@@ -86,8 +86,6 @@ flutter test
 
 Coverage includes mappers, repository fallback, retry/TTL, both BLoCs, offline banner, pages, and flow-style widget tests under `test/integration/`.
 
-*(Placeholders — capture after `flutter run`.)*
-
 ## AI assistance
 
 See [AI_USAGE.md](AI_USAGE.md) for phase prompts, model outputs, and accept/edit/reject decisions.
